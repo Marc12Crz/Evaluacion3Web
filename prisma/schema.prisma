@@ -7,17 +7,22 @@ generator client {
   provider = "prisma-client-js"
 }
 
-model Producto {
-  id          Int       @id @default(autoincrement())
-  nombre      String
-  descripcion String
-  precio      Float
-  categoria   Categoria @relation(fields: [categoriaId], references: [id])
-  categoriaId Int
+model TipoMedic {
+  CodTipoMed   Int           @id @default(autoincrement())
+  descripcion  String
+  medicamentos Medicamento[] // Relación 1 a muchos
 }
 
-model Categoria {
-  id        Int        @id @default(autoincrement())
-  nombre    String
-  productos Producto[]
+model Medicamento {
+  CodMedicamento   Int       @id @default(autoincrement())
+  descripcionMed   String
+  fechaFabricacion DateTime
+  fechaVencimiento DateTime
+  presentacion     String
+  stock            Int
+  precioVentaUni   Float
+  precioVentaPres  Float
+  marca            String
+  CodTipoMed       Int
+  tipoMedic        TipoMedic @relation(fields: [CodTipoMed], references: [CodTipoMed])
 }

@@ -1,38 +1,39 @@
 import Navbar from '../components/Navbar'
 import { useEffect, useState } from 'react'
 
-export default function ProductosPage() {
-  const [productos, setProductos] = useState([])
-  const [categorias, setCategorias] = useState([])
+export default function MedicamentoPage() {
+  const [medicamentos, setMedicamentos] = useState([])
+  const [tipos, setTipos] = useState([])
   const [form, setForm] = useState({
     id: null,
-    nombre: '',
-    descripcion: '',
-    precio: '',
-    categoriaId: ''
+    descripcionMed: '',
+    fechaFabricacion: '',
+    fechaVencimiento: '',
+    presentacion: '',
+    stock: '',
+    precioVentaUni: '',
+    precioVentaPres: '',
+    marca: '',
+    CodTipoMed: ''
   })
   const [isEditing, setIsEditing] = useState(false)
   const [error, setError] = useState('')
 
-  // Cargar productos y categorías al inicio
   useEffect(() => {
-    fetchProductos()
-    fetchCategorias()
+    fetchMedicamentos()
+    fetchTipos()
   }, [])
 
-  const fetchProductos = async () => {
-    const res = await fetch('/api/productos')
+  const fetchMedicamentos = async () => {
+    const res = await fetch('/api/medicamento')
     const data = await res.json()
-    setProductos(data)
+    setMedicamentos(data)
   }
 
-  // Asumo que tienes una API para categorías, si no ajusta según tu modelo
-  const fetchCategorias = async () => {
-    const res = await fetch('/api/categorias')
-    if (res.ok) {
-      const data = await res.json()
-      setCategorias(data)
-    }
+  const fetchTipos = async () => {
+    const res = await fetch('/api/tipomedic')
+    const data = await res.json()
+    setTipos(data)
   }
 
   const handleInputChange = (e) => {
@@ -44,237 +45,157 @@ export default function ProductosPage() {
     e.preventDefault()
     setError('')
 
-    if (!form.nombre || !form.descripcion || !form.precio || !form.categoriaId) {
+    const required = [
+      'descripcionMed', 'fechaFabricacion', 'fechaVencimiento',
+      'presentacion', 'stock', 'precioVentaUni', 'precioVentaPres', 'marca', 'CodTipoMed'
+    ]
+
+    if (required.some(key => !form[key])) {
       setError('Todos los campos son obligatorios')
       return
     }
 
     try {
       const payload = {
-        nombre: form.nombre,
-        descripcion: form.descripcion,
-        precio: parseFloat(form.precio),
-        categoriaId: parseInt(form.categoriaId)
+        ...form,
+        stock: parseInt(form.stock),
+        precioVentaUni: parseFloat(form.precioVentaUni),
+        precioVentaPres: parseFloat(form.precioVentaPres),
+        CodTipoMed: parseInt(form.CodTipoMed),
+        fechaFabricacion: new Date(form.fechaFabricacion),
+        fechaVencimiento: new Date(form.fechaVencimiento)
       }
 
       if (isEditing) {
-        // Editar producto
-        const res = await fetch(`/api/productos?id=${form.id}`, {
+        await fetch(`/api/medicamento?id=${form.id}`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         })
-        if (!res.ok) throw new Error('Error actualizando producto')
       } else {
-        // Crear producto
-        const res = await fetch('/api/productos', {
+        await fetch('/api/medicamento', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload)
         })
-        if (!res.ok) throw new Error('Error creando producto')
       }
 
-      // Limpiar formulario y recargar lista
-      setForm({ id: null, nombre: '', descripcion: '', precio: '', categoriaId: '' })
+      setForm({
+        id: null, descripcionMed: '', fechaFabricacion: '', fechaVencimiento: '',
+        presentacion: '', stock: '', precioVentaUni: '', precioVentaPres: '', marca: '', CodTipoMed: ''
+      })
       setIsEditing(false)
-      fetchProductos()
+      fetchMedicamentos()
     } catch (err) {
       setError(err.message)
     }
   }
 
-  const handleEdit = (producto) => {
+  const handleEdit = (med) => {
     setForm({
-      id: producto.id,
-      nombre: producto.nombre,
-      descripcion: producto.descripcion,
-      precio: producto.precio,
-      categoriaId: producto.categoriaId
+      id: med.CodMedicamento,
+      descripcionMed: med.descripcionMed,
+      fechaFabricacion: med.fechaFabricacion.split('T')[0],
+      fechaVencimiento: med.fechaVencimiento.split('T')[0],
+      presentacion: med.presentacion,
+      stock: med.stock,
+      precioVentaUni: med.precioVentaUni,
+      precioVentaPres: med.precioVentaPres,
+      marca: med.marca,
+      CodTipoMed: med.CodTipoMed
     })
     setIsEditing(true)
-    setError('')
   }
 
   const handleDelete = async (id) => {
-    if (!confirm('¿Seguro que quieres eliminar este producto?')) return
-
-    try {
-      const res = await fetch(`/api/productos?id=${id}`, {
-        method: 'DELETE'
-      })
-      if (!res.ok) throw new Error('Error eliminando producto')
-      fetchProductos()
-    } catch (err) {
-      alert(err.message)
-    }
+    if (!confirm('¿Eliminar medicamento?')) return
+    await fetch(`/api/medicamento?id=${id}`, { method: 'DELETE' })
+    fetchMedicamentos()
   }
 
   return (
     <>
       <Navbar />
-      <main style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto', fontFamily: 'Arial, sans-serif' }}>
-        <h1 style={{ textAlign: 'center', color: '#2c3e50', marginBottom: '1.5rem' }}>Productos</h1>
+      <main style={{ padding: '2rem', maxWidth: '800px', margin: '0 auto' }}>
+        <h1>Medicamentos</h1>
 
-        <form 
-          onSubmit={handleSubmit} 
-          style={{ 
-            marginBottom: '2rem', 
-            padding: '1rem', 
-            backgroundColor: '#ecf0f1', 
-            borderRadius: '8px',
-            boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
-          }}
-        >
-          <h2>{isEditing ? 'Editar Producto' : 'Nuevo Producto'}</h2>
+        <form onSubmit={handleSubmit} style={{ background: '#f1f1f1', padding: '1rem', marginBottom: '2rem', borderRadius: '8px' }}>
+          <h3>{isEditing ? 'Editar' : 'Nuevo'} Medicamento</h3>
 
-          <div style={{ marginBottom: '0.5rem' }}>
-            <label>Nombre:</label><br />
-            <input
-              type="text"
-              name="nombre"
-              value={form.nombre}
-              onChange={handleInputChange}
-              style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' }}
-            />
-          </div>
+          <input name="descripcionMed" placeholder="Descripción" value={form.descripcionMed} onChange={handleInputChange} required style={inputStyle} />
+          <input name="fechaFabricacion" type="date" value={form.fechaFabricacion} onChange={handleInputChange} required style={inputStyle} />
+          <input name="fechaVencimiento" type="date" value={form.fechaVencimiento} onChange={handleInputChange} required style={inputStyle} />
+          <input name="presentacion" placeholder="Presentación" value={form.presentacion} onChange={handleInputChange} required style={inputStyle} />
+          <input name="stock" type="number" placeholder="Stock" value={form.stock} onChange={handleInputChange} required style={inputStyle} />
+          <input name="precioVentaUni" type="number" step="0.01" placeholder="Precio Unitario" value={form.precioVentaUni} onChange={handleInputChange} required style={inputStyle} />
+          <input name="precioVentaPres" type="number" step="0.01" placeholder="Precio Presentación" value={form.precioVentaPres} onChange={handleInputChange} required style={inputStyle} />
+          <input name="marca" placeholder="Marca" value={form.marca} onChange={handleInputChange} required style={inputStyle} />
 
-          <div style={{ marginBottom: '0.5rem' }}>
-            <label>Descripción:</label><br />
-            <textarea
-              name="descripcion"
-              value={form.descripcion}
-              onChange={handleInputChange}
-              rows={3}
-              style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' }}
-            />
-          </div>
-
-          <div style={{ marginBottom: '0.5rem' }}>
-            <label>Precio:</label><br />
-            <input
-              type="number"
-              step="0.01"
-              name="precio"
-              value={form.precio}
-              onChange={handleInputChange}
-              style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' }}
-            />
-          </div>
-
-          <div style={{ marginBottom: '0.5rem' }}>
-            <label>Categoría:</label><br />
-            <select
-              name="categoriaId"
-              value={form.categoriaId}
-              onChange={handleInputChange}
-              style={{ width: '100%', padding: '0.5rem', borderRadius: '4px', border: '1px solid #ccc' }}
-            >
-              <option value="">Seleccione una categoría</option>
-              {categorias.map(cat => (
-                <option key={cat.id} value={cat.id}>{cat.nombre}</option>
-              ))}
-            </select>
-          </div>
+          <select name="CodTipoMed" value={form.CodTipoMed} onChange={handleInputChange} required style={inputStyle}>
+            <option value="">Selecciona tipo</option>
+            {tipos.map(t => (
+              <option key={t.CodTipoMed} value={t.CodTipoMed}>{t.descripcion}</option>
+            ))}
+          </select>
 
           {error && <p style={{ color: 'red' }}>{error}</p>}
 
-          <button 
-            type="submit"
-            style={{
-              padding: '0.6rem 1.2rem',
-              backgroundColor: '#0066cc',
-              color: 'white',
-              border: 'none',
-              borderRadius: '4px',
-              cursor: 'pointer'
-            }}
-          >
+          <button type="submit" style={buttonStyle}>
             {isEditing ? 'Actualizar' : 'Crear'}
           </button>
-
           {isEditing && (
-            <button 
-              type="button"
-              onClick={() => {
-                setForm({ id: null, nombre: '', descripcion: '', precio: '', categoriaId: '' })
-                setIsEditing(false)
-                setError('')
-              }}
-              style={{
-                marginLeft: '1rem',
-                padding: '0.6rem 1.2rem',
-                backgroundColor: '#999',
-                color: 'white',
-                border: 'none',
-                borderRadius: '4px',
-                cursor: 'pointer'
-              }}
-            >
+            <button type="button" onClick={() => {
+              setForm({ id: null, descripcionMed: '', fechaFabricacion: '', fechaVencimiento: '', presentacion: '', stock: '', precioVentaUni: '', precioVentaPres: '', marca: '', CodTipoMed: '' })
+              setIsEditing(false)
+            }} style={{ ...buttonStyle, background: '#999', marginLeft: '1rem' }}>
               Cancelar
             </button>
           )}
         </form>
 
-        <ul style={{ listStyle: 'none', padding: 0 }}>
-          {productos.map((producto) => (
-            <li 
-              key={producto.id} 
-              style={{
-                backgroundColor: '#f9f9f9',
-                borderRadius: '8px',
-                padding: '1rem',
-                marginBottom: '1rem',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.1)',
-                display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
-                transition: 'transform 0.2s ease',
-              }}
-            >
-              <div>
-                <span style={{ fontWeight: '600', color: '#34495e' }}>{producto.nombre}</span><br />
-                <small style={{ fontStyle: 'italic', color: '#7f8c8d' }}>
-                  {producto.categoria?.nombre || 'Sin categoría'}
-                </small><br />
-                <small>{producto.descripcion}</small><br />
-                <small><b>Precio:</b> ${producto.precio.toFixed(2)}</small>
-              </div>
+        <ul style={{ padding: 0, listStyle: 'none' }}>
+          {medicamentos.map((med) => (
+            <li key={med.CodMedicamento} style={{ background: '#f9f9f9', marginBottom: '1rem', padding: '1rem', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)' }}>
+              <strong>{med.descripcionMed}</strong> ({med.marca})<br />
+              <small>Tipo: {med.tipoMedic?.descripcion || 'N/A'}</small><br />
+              <small>Precio: S/. {med.precioVentaUni.toFixed(2)} - Stock: {med.stock}</small><br />
+              <small>Vence: {new Date(med.fechaVencimiento).toLocaleDateString()}</small><br />
 
-              <div>
-                <button
-                  onClick={() => handleEdit(producto)}
-                  style={{
-                    marginRight: '0.5rem',
-                    padding: '0.4rem 0.8rem',
-                    backgroundColor: '#2980b9',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Editar
-                </button>
-
-                <button
-                  onClick={() => handleDelete(producto.id)}
-                  style={{
-                    padding: '0.4rem 0.8rem',
-                    backgroundColor: '#c0392b',
-                    color: 'white',
-                    border: 'none',
-                    borderRadius: '4px',
-                    cursor: 'pointer'
-                  }}
-                >
-                  Eliminar
-                </button>
-              </div>
+              <button onClick={() => handleEdit(med)} style={smallBtnStyle}>Editar</button>
+              <button onClick={() => handleDelete(med.CodMedicamento)} style={{ ...smallBtnStyle, background: '#e74c3c' }}>Eliminar</button>
             </li>
           ))}
         </ul>
       </main>
     </>
   )
+}
+
+const inputStyle = {
+  display: 'block',
+  marginBottom: '0.5rem',
+  padding: '0.5rem',
+  width: '100%',
+  borderRadius: '4px',
+  border: '1px solid #ccc'
+}
+
+const buttonStyle = {
+  padding: '0.6rem 1.2rem',
+  backgroundColor: '#2c3e50',
+  color: 'white',
+  border: 'none',
+  borderRadius: '4px',
+  cursor: 'pointer'
+}
+
+const smallBtnStyle = {
+  marginTop: '0.5rem',
+  marginRight: '0.5rem',
+  padding: '0.4rem 0.8rem',
+  background: '#3498db',
+  color: '#fff',
+  border: 'none',
+  borderRadius: '4px',
+  cursor: 'pointer'
 }
